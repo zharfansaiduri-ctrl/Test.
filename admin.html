@@ -174,14 +174,12 @@ th{background:var(--bg1);color:white;}
 if(sessionStorage.getItem('isLoggedIn')!=='true')location.href='adminlogin.html';
 function logout(){sessionStorage.clear();location.href='adminlogin.html';}
 
-// ===== URL BORANG (Tanpa Kertas A4) =====
 const FORM_URLS=[
  {label:"AlatTulis2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=AlatTulis2026"},
  {label:"Kenderaan2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Kenderaan2026"},
  {label:"Projektor2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Projektor2026"}
 ];
 
-// ===== SCRIPT URL (Tanpa Kertas A4) =====
 const SCRIPT_URLS=[
  {label:"AlatTulis2026",url:"https://script.google.com/macros/s/AKfycbyXUmQO6701Tv7f7vl7xuFcVgdvw0vKUSUiCjNiTx_blv2XPaYL1dPenP09ulcwc6Ug6w/exec"},
  {label:"Kenderaan2026",url:"https://script.google.com/macros/s/AKfycby0eimKxmekifIZFVHw4HnQCaIVmpXQiYJ27usQpNv7v1kCVanOyqo1X-d-N4msUKnq/exec"},
@@ -309,3 +307,4 @@ document.addEventListener('DOMContentLoaded',generateQR);
 
 </body>
 </html>
+
