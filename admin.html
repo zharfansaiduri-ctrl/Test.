@@ -124,7 +124,6 @@ th{background:var(--bg1);color:white;}
    <option>AlatTulis2026</option>
    <option>Kenderaan2026</option>
    <option>Projektor2026</option>
-   <option>KertasA42026</option>
   </select>
   <select id="fBulan" onchange="filterData()">
    <option value="all">Semua Bulan</option>
@@ -165,7 +164,6 @@ th{background:var(--bg1);color:white;}
   <div class="card"><h2>Alat Tulis</h2><p id="alat">0</p></div>
   <div class="card"><h2>Kenderaan</h2><p id="ken">0</p></div>
   <div class="card"><h2>Projektor</h2><p id="pro">0</p></div>
-  <div class="card"><h2>Kertas A4</h2><p id="ker">0</p></div>
  </div>
 </div>
 
@@ -176,20 +174,18 @@ th{background:var(--bg1);color:white;}
 if(sessionStorage.getItem('isLoggedIn')!=='true')location.href='adminlogin.html';
 function logout(){sessionStorage.clear();location.href='adminlogin.html';}
 
-// ===== URL BORANG (Generate QR dengan format 2026) =====
+// ===== URL BORANG (Tanpa Kertas A4) =====
 const FORM_URLS=[
  {label:"AlatTulis2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=AlatTulis2026"},
  {label:"Kenderaan2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Kenderaan2026"},
- {label:"Projektor2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Projektor2026"},
- {label:"KertasA42026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=KertasA42026"}
+ {label:"Projektor2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Projektor2026"}
 ];
 
-// ===== SCRIPT URL =====
+// ===== SCRIPT URL (Tanpa Kertas A4) =====
 const SCRIPT_URLS=[
  {label:"AlatTulis2026",url:"https://script.google.com/macros/s/AKfycbyXUmQO6701Tv7f7vl7xuFcVgdvw0vKUSUiCjNiTx_blv2XPaYL1dPenP09ulcwc6Ug6w/exec"},
  {label:"Kenderaan2026",url:"https://script.google.com/macros/s/AKfycby0eimKxmekifIZFVHw4HnQCaIVmpXQiYJ27usQpNv7v1kCVanOyqo1X-d-N4msUKnq/exec"},
- {label:"Projektor2026",url:"https://script.google.com/macros/s/AKfycbwp9cqsZMSqcRrB04SQLWtkR0ryjATCw113ES2cogQ3A1jlD8XOLyJ0hQ1hNJCmTknf/exec"},
- {label:"KertasA42026",url:"https://script.google.com/macros/s/AKfycbxSUtwMx3t0gPDAYZ9k4eMULgamIn5gnp3UXsKKhR_caHiWAxrmGet2rKdrm1ZLcStQPg/exec"}
+ {label:"Projektor2026",url:"https://script.google.com/macros/s/AKfycbwp9cqsZMSqcRrB04SQLWtkR0ryjATCw113ES2cogQ3A1jlD8XOLyJ0hQ1hNJCmTknf/exec"}
 ];
 
 // TAB
@@ -306,7 +302,6 @@ function updateDash(){
  alat.innerText=filtered.filter(x=>x.JenisPermohonan==='AlatTulis2026').length;
  ken.innerText=filtered.filter(x=>x.JenisPermohonan==='Kenderaan2026').length;
  pro.innerText=filtered.filter(x=>x.JenisPermohonan==='Projektor2026').length;
- ker.innerText=filtered.filter(x=>x.JenisPermohonan==='KertasA42026').length;
 }
 
 document.addEventListener('DOMContentLoaded',generateQR);
@@ -314,5 +309,3 @@ document.addEventListener('DOMContentLoaded',generateQR);
 
 </body>
 </html>
-
-
