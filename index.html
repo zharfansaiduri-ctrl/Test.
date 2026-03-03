@@ -130,6 +130,7 @@ button:disabled{opacity:.6;cursor:not-allowed}
       <option value="">-- Pilih --</option>
       <option value="alat_tulis">Alat Tulis</option>
       <option value="kenderaan">Kenderaan (Permohonan)</option>
+      <option value="perm_kenderaan">Kenderaan (Permohonan Baru)</option>
       <option value="penggunaan_kenderaan">Kenderaan (Penggunaan)</option>
       <option value="projektor">Projektor</option>
     </select>
@@ -138,7 +139,7 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <input type="text" id="item" class="hidden" placeholder="">
     <input type="number" id="kuantiti" class="hidden" placeholder="Kuantiti">
 
-    <!-- Kenderaan Permohonan -->
+    <!-- Kenderaan Permohonan (lama, dengan odo) -->
     <input type="text" id="jenisKenderaan" class="hidden" placeholder="Jenis Kenderaan">
     <input type="text" id="masa" class="hidden" placeholder="Masa">
     <input type="text" id="namaPemandu" class="hidden" placeholder="Nama Pemandu">
@@ -146,7 +147,15 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <input type="text" id="tujuan" class="hidden" placeholder="Tujuan">
     <input type="number" id="bacaanOdo" class="hidden" placeholder="Bacaan Odometer (km)">
 
-    <!-- Kenderaan Penggunaan (tanpa odo, tarikh+masa manual) -->
+    <!-- PermKenderaan2026 (tanpa odo, tarikh+masa manual) -->
+    <input type="text" id="pkJenisKenderaan" class="hidden" placeholder="Jenis Kenderaan">
+    <input type="text" id="pkNamaPemandu" class="hidden" placeholder="Nama Pemandu">
+    <input type="text" id="pkLokasi" class="hidden" placeholder="Lokasi">
+    <input type="text" id="pkTujuan" class="hidden" placeholder="Tujuan">
+    <input type="date" id="pkTarikh" class="hidden">
+    <input type="time" id="pkMasa" class="hidden">
+
+    <!-- Kenderaan Penggunaan -->
     <input type="text" id="pgJenisKenderaan" class="hidden" placeholder="Jenis Kenderaan">
     <input type="text" id="pgNamaPemandu" class="hidden" placeholder="Nama Pemandu">
     <input type="text" id="pgLokasi" class="hidden" placeholder="Lokasi">
@@ -171,7 +180,9 @@ const NAMES_API = 'https://script.google.com/macros/s/AKfycbx6kMJIKKJOj3wOE71pAL
 const POST_API = {
   alat_tulis:"https://script.google.com/macros/s/AKfycbwBQtsg3QjNGMM8z3wZw61VS0jkGKP2BHc6j2Du7HklazaiqGEemal1JvwPJ-7EzBTLLQ/exec",
   kenderaan:"https://script.google.com/macros/s/AKfycbxvMxEIGXqZA8mlgYLsMFgYkNNFekaqOAhucDPfNhlsZwTj5P-470ar73BaQSo_AnsO4w/exec",
-  penggunaan_kenderaan:"https://script.google.com/macros/s/AKfycbxvMxEIGXqZA8mlgYLsMFgYkNNFekaqOAhucDPfNhlsZwTj5P-470ar73BaQSo_AnsO4w/exec", // ← Tukar ke URL Google Script baru untuk sheet Penggunaan Kenderaan
+  // ⚠️ TUKAR URL ni kepada Google Apps Script baru untuk sheet PermKenderaan2026
+  perm_kenderaan:"https://script.google.com/macros/s/TUKAR_URL_PERM_KENDERAAN_2026/exec",
+  penggunaan_kenderaan:"https://script.google.com/macros/s/AKfycbxvMxEIGXqZA8mlgYLsMFgYkNNFekaqOAhucDPfNhlsZwTj5P-470ar73BaQSo_AnsO4w/exec",
   projektor:"https://script.google.com/macros/s/AKfycbw3pI9-V5RT_38OuIMddcCsJeKtWh7n3Z6Z2pQWfTpbG20Boavt2ZkKS0Uz4fRH0cYW/exec"
 };
 let namesData=[];
@@ -237,6 +248,14 @@ const timestamp = document.getElementById('timestamp');
 const submitBtn = document.getElementById('submitBtn');
 const jenisLabel = document.getElementById('jenisLabel');
 
+// PermKenderaan2026 fields
+const pkJenisKenderaan = document.getElementById('pkJenisKenderaan');
+const pkNamaPemandu = document.getElementById('pkNamaPemandu');
+const pkLokasi = document.getElementById('pkLokasi');
+const pkTujuan = document.getElementById('pkTujuan');
+const pkTarikh = document.getElementById('pkTarikh');
+const pkMasa = document.getElementById('pkMasa');
+
 // Penggunaan Kenderaan fields
 const pgJenisKenderaan = document.getElementById('pgJenisKenderaan');
 const pgNamaPemandu = document.getElementById('pgNamaPemandu');
@@ -245,27 +264,22 @@ const pgTujuan = document.getElementById('pgTujuan');
 const pgTarikh = document.getElementById('pgTarikh');
 const pgMasa = document.getElementById('pgMasa');
 
-// Label wrappers - we inject labels dynamically
-function addLabelBefore(el, text) {
-  if (!el._label) {
-    const lbl = document.createElement('label');
-    lbl.textContent = text;
-    lbl._forField = el.id;
-    el.parentNode.insertBefore(lbl, el);
-    el._label = lbl;
-  }
+function injectLabel(el, text) {
+  const lbl = document.createElement('label');
+  lbl.textContent = text;
+  lbl.setAttribute('data-dynamic', '1');
+  el.parentNode.insertBefore(lbl, el);
 }
 
 function updateFieldsByJenis(jenis){
   const allFields = [
     item, kuantiti,
     jenisKenderaan, masa, namaPemandu, lokasi, tujuan, bacaanOdo,
+    pkJenisKenderaan, pkNamaPemandu, pkLokasi, pkTujuan, pkTarikh, pkMasa,
     pgJenisKenderaan, pgNamaPemandu, pgLokasi, pgTujuan, pgTarikh, pgMasa,
     noProjektor
   ];
   allFields.forEach(f => { f.classList.add('hidden'); f.value = ''; });
-
-  // Hide injected labels too
   document.querySelectorAll('label[data-dynamic]').forEach(l => l.remove());
 
   if(jenis === 'alat_tulis'){
@@ -283,8 +297,27 @@ function updateFieldsByJenis(jenis){
     bacaanOdo.classList.remove('hidden');
   }
 
+  if(jenis === 'perm_kenderaan'){
+    injectLabel(pkJenisKenderaan, 'Jenis Kenderaan');
+    pkJenisKenderaan.classList.remove('hidden');
+
+    injectLabel(pkNamaPemandu, 'Nama Pemandu');
+    pkNamaPemandu.classList.remove('hidden');
+
+    injectLabel(pkLokasi, 'Lokasi');
+    pkLokasi.classList.remove('hidden');
+
+    injectLabel(pkTujuan, 'Tujuan');
+    pkTujuan.classList.remove('hidden');
+
+    injectLabel(pkTarikh, 'Tarikh');
+    pkTarikh.classList.remove('hidden');
+
+    injectLabel(pkMasa, 'Masa');
+    pkMasa.classList.remove('hidden');
+  }
+
   if(jenis === 'penggunaan_kenderaan'){
-    // Inject labels for date/time
     injectLabel(pgJenisKenderaan, 'Jenis Kenderaan');
     pgJenisKenderaan.classList.remove('hidden');
 
@@ -307,13 +340,6 @@ function updateFieldsByJenis(jenis){
   if(jenis === 'projektor'){
     noProjektor.classList.remove('hidden');
   }
-}
-
-function injectLabel(el, text) {
-  const lbl = document.createElement('label');
-  lbl.textContent = text;
-  lbl.setAttribute('data-dynamic', '1');
-  el.parentNode.insertBefore(lbl, el);
 }
 
 jenisSelect.addEventListener('change', function(){
@@ -344,6 +370,14 @@ document.getElementById('assetForm').addEventListener('submit', async e=>{
     data.lokasi = lokasi.value || '-';
     data.tujuan = tujuan.value || '-';
     data.bacaan_odometer = bacaanOdo.value || '-';
+  } else if(jenis === 'perm_kenderaan'){
+    data.jenis_kenderaan = pkJenisKenderaan.value || '-';
+    data.nama_pemandu = pkNamaPemandu.value || '-';
+    data.lokasi = pkLokasi.value || '-';
+    data.tujuan = pkTujuan.value || '-';
+    data.tarikh = pkTarikh.value || '-';
+    data.masa = pkMasa.value || '-';
+    data.jenis_permohonan = 'PermKenderaan2026';
   } else if(jenis === 'penggunaan_kenderaan'){
     data.jenis_kenderaan = pgJenisKenderaan.value || '-';
     data.nama_pemandu = pgNamaPemandu.value || '-';
@@ -390,6 +424,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     mappedJenis = 'alat_tulis';
   } else if(jenisParam === 'Kenderaan' || jenisParam === 'Kenderaan2026'){
     mappedJenis = 'kenderaan';
+  } else if(jenisParam === 'PermKenderaan2026'){
+    mappedJenis = 'perm_kenderaan';
   } else if(jenisParam === 'PenggunaanKenderaan' || jenisParam === 'PenggunaanKenderaan2026'){
     mappedJenis = 'penggunaan_kenderaan';
   } else if(jenisParam === 'Projektor' || jenisParam === 'Projektor2026'){
