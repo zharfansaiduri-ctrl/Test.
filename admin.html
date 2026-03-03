@@ -98,15 +98,6 @@ th{background:var(--bg1);color:white;}
  font-size:13px;
  max-width:300px;
 }
-.item-badge{
- display:inline-block;
- background:#e0f2fe;
- color:#0369a1;
- padding:3px 8px;
- margin:2px;
- border-radius:4px;
- font-size:12px;
-}
 </style>
 </head>
 
@@ -138,6 +129,7 @@ th{background:var(--bg1);color:white;}
    <option value="all">Semua Jenis</option>
    <option>AlatTulis2026</option>
    <option>Kenderaan2026</option>
+   <option>PermKenderaan2026</option>
    <option>Projektor2026</option>
   </select>
   <select id="fBulan" onchange="filterData()">
@@ -178,6 +170,7 @@ th{background:var(--bg1);color:white;}
   <div class="card"><h2>Total</h2><p id="total">0</p></div>
   <div class="card"><h2>Alat Tulis</h2><p id="alat">0</p></div>
   <div class="card"><h2>Kenderaan</h2><p id="ken">0</p></div>
+  <div class="card"><h2>Perm. Kenderaan</h2><p id="permken">0</p></div>
   <div class="card"><h2>Projektor</h2><p id="pro">0</p></div>
  </div>
 </div>
@@ -190,15 +183,18 @@ if(sessionStorage.getItem('isLoggedIn')!=='true')location.href='adminlogin.html'
 function logout(){sessionStorage.clear();location.href='adminlogin.html';}
 
 const FORM_URLS=[
- {label:"AlatTulis2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=AlatTulis2026"},
- {label:"Kenderaan2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Kenderaan2026"},
- {label:"Projektor2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Projektor2026"}
+ {label:"AlatTulis2026",    url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=AlatTulis2026"},
+ {label:"Kenderaan2026",    url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Kenderaan2026"},
+ {label:"PermKenderaan2026",url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=PermKenderaan2026"},
+ {label:"Projektor2026",    url:"https://ict-upsiholdings.github.io/assetinventorysystem/index.html?jenis=Projektor2026"}
 ];
 
 const SCRIPT_URLS=[
- {label:"AlatTulis2026",url:"https://script.google.com/macros/s/AKfycbyXUmQO6701Tv7f7vl7xuFcVgdvw0vKUSUiCjNiTx_blv2XPaYL1dPenP09ulcwc6Ug6w/exec"},
- {label:"Kenderaan2026",url:"https://script.google.com/macros/s/AKfycby0eimKxmekifIZFVHw4HnQCaIVmpXQiYJ27usQpNv7v1kCVanOyqo1X-d-N4msUKnq/exec"},
- {label:"Projektor2026",url:"https://script.google.com/macros/s/AKfycbwp9cqsZMSqcRrB04SQLWtkR0ryjATCw113ES2cogQ3A1jlD8XOLyJ0hQ1hNJCmTknf/exec"}
+ {label:"AlatTulis2026",    url:"https://script.google.com/macros/s/AKfycbyXUmQO6701Tv7f7vl7xuFcVgdvw0vKUSUiCjNiTx_blv2XPaYL1dPenP09ulcwc6Ug6w/exec"},
+ {label:"Kenderaan2026",    url:"https://script.google.com/macros/s/AKfycby0eimKxmekifIZFVHw4HnQCaIVmpXQiYJ27usQpNv7v1kCVanOyqo1X-d-N4msUKnq/exec"},
+ // ⚠️ TUKAR URL ni kepada Google Apps Script baru untuk sheet PermKenderaan2026
+ {label:"PermKenderaan2026",url:"https://script.google.com/macros/s/TUKAR_URL_PERM_KENDERAAN_2026/exec"},
+ {label:"Projektor2026",    url:"https://script.google.com/macros/s/AKfycbwp9cqsZMSqcRrB04SQLWtkR0ryjATCw113ES2cogQ3A1jlD8XOLyJ0hQ1hNJCmTknf/exec"}
 ];
 
 // TAB
@@ -231,7 +227,6 @@ function generateQR(){
   `;
   qrGrid.appendChild(card);
 
-  // delay render
   setTimeout(()=>{
    new QRCode(document.getElementById(`qr_${i}`),{
     text:f.url,width:200,height:200
@@ -249,10 +244,10 @@ function downloadQR(id,name){
 /* ===== DATA & DASHBOARD ===== */
 let all=[],filtered=[];
 
-// ✅ Convert timestamp sheet sahaja, ikut masa sheet
 function formatDateTime(iso){
  if(!iso) return '-';
  const d = new Date(iso);
+ if(isNaN(d)) return iso; // fallback kalau bukan ISO
  const day = String(d.getDate()).padStart(2,'0');
  const month = String(d.getMonth()+1).padStart(2,'0');
  const year = d.getFullYear();
@@ -262,47 +257,47 @@ function formatDateTime(iso){
  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
 }
 
-// ✅ Function untuk extract item yang diminta
 function extractItems(data){
  const items = [];
- 
- // Check untuk field yang mungkin ada dalam form
- // Adjust field names ni based on actual Google Sheet columns
  const possibleFields = [
-  'Item', 'ItemDiminta', 'Perkara', 'Barang', 
-  'JenisBarang', 'NamaBarang', 'NamaItem',
-  'Pen', 'Pensil', 'Kertas', 'Buku', // Alat Tulis
-  'JenisKenderaan', 'ModelKenderaan', // Kenderaan
-  'ModelProjektor', 'JenisProjektor' // Projektor
+  'Item','ItemDiminta','Perkara','Barang',
+  'JenisBarang','NamaBarang','NamaItem',
+  'jenis_alatan','kuantiti',
+  'jenis_kenderaan','nama_pemandu','lokasi','tujuan','bacaan_odometer',
+  'tarikh','masa',
+  'Pen','Pensil','Kertas','Buku',
+  'ModelProjektor','JenisProjektor','no_projektor'
  ];
- 
- // Loop through all possible fields
+
  for(const field of possibleFields){
   if(data[field] && data[field] !== '' && data[field] !== '-'){
-   items.push(data[field]);
+   items.push(`${field}: ${data[field]}`);
   }
  }
- 
- // Jika tiada item found, try to get all non-standard fields
+
  if(items.length === 0){
-  const standardFields = ['Timestamp', 'Nama', 'Jabatan', 'JenisPermohonan', 'Email', 'NoTelefon'];
+  const standardFields = ['Timestamp','Nama','Jabatan','JenisPermohonan','jenis_permohonan','Email','NoTelefon','nama','jabatan','timestamp'];
   for(const key in data){
    if(!standardFields.includes(key) && data[key] && data[key] !== '' && data[key] !== '-'){
     items.push(`${key}: ${data[key]}`);
    }
   }
  }
- 
- return items.length > 0 ? items.join(', ') : '-';
+
+ return items.length > 0 ? items.join(' | ') : '-';
 }
 
 async function loadData(){
  all=[];tableData.innerHTML='<tr><td colspan="6" class="loading">Loading...</td></tr>';
  for(const s of SCRIPT_URLS){
-  const r=await fetch(s.url);const d=await r.json();
-  const rows=Array.isArray(d)?d:Object.values(d).flat();
-  rows.forEach(x=>x.JenisPermohonan=s.label);
-  all=all.concat(rows);
+  try{
+   const r=await fetch(s.url);const d=await r.json();
+   const rows=Array.isArray(d)?d:Object.values(d).flat();
+   rows.forEach(x=>x.JenisPermohonan=s.label);
+   all=all.concat(rows);
+  }catch(e){
+   console.warn(`Gagal load ${s.label}:`,e);
+  }
  }
  filterData();
 }
@@ -312,13 +307,14 @@ function filterData(){
  const b=fBulan.value;
  const q=search.value.toLowerCase();
  filtered=all.filter(d=>{
-  const bulanData = d.Timestamp ? String(new Date(d.Timestamp).getMonth()+1).padStart(2,'0') : '';
+  const ts = d.Timestamp || d.timestamp || '';
+  const bulanData = ts ? String(new Date(ts).getMonth()+1).padStart(2,'0') : '';
   const items = extractItems(d).toLowerCase();
+  const nama = (d.Nama||d.nama||'').toLowerCase();
+  const jab = (d.Jabatan||d.jabatan||'').toLowerCase();
   return (j==='all'||d.JenisPermohonan===j) &&
    (b==='all'||bulanData===b) &&
-   ((d.Nama||'').toLowerCase().includes(q)||
-    (d.Jabatan||'').toLowerCase().includes(q)||
-    items.includes(q));
+   (nama.includes(q)||jab.includes(q)||items.includes(q));
  });
  render();updateDash();
 }
@@ -331,23 +327,23 @@ function render(){
  <tr>
   <td>${i+1}</td>
   <td>${d.JenisPermohonan}</td>
-  <td>${d.Nama||'-'}</td>
-  <td>${d.Jabatan||'-'}</td>
+  <td>${d.Nama||d.nama||'-'}</td>
+  <td>${d.Jabatan||d.jabatan||'-'}</td>
   <td class="item-list">${extractItems(d)}</td>
-  <td>${formatDateTime(d.Timestamp)}</td>
+  <td>${formatDateTime(d.Timestamp||d.timestamp||'')}</td>
  </tr>`).join('');
 }
 
 function exportExcel(){
  if(!filtered.length)return alert('Tiada data');
  const ws=XLSX.utils.json_to_sheet(filtered.map(d=>{
-     return {
-      JenisPermohonan: d.JenisPermohonan,
-      Nama: d.Nama || '-',
-      Jabatan: d.Jabatan || '-',
-      ItemDiminta: extractItems(d),
-      Timestamp: formatDateTime(d.Timestamp)
-     };
+  return {
+   JenisPermohonan: d.JenisPermohonan,
+   Nama: d.Nama||d.nama||'-',
+   Jabatan: d.Jabatan||d.jabatan||'-',
+   ItemDiminta: extractItems(d),
+   Timestamp: formatDateTime(d.Timestamp||d.timestamp||'')
+  };
  }));
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,ws,'Permohonan');
@@ -358,6 +354,7 @@ function updateDash(){
  total.innerText=filtered.length;
  alat.innerText=filtered.filter(x=>x.JenisPermohonan==='AlatTulis2026').length;
  ken.innerText=filtered.filter(x=>x.JenisPermohonan==='Kenderaan2026').length;
+ permken.innerText=filtered.filter(x=>x.JenisPermohonan==='PermKenderaan2026').length;
  pro.innerText=filtered.filter(x=>x.JenisPermohonan==='Projektor2026').length;
 }
 
