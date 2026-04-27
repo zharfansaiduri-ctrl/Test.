@@ -111,29 +111,6 @@ button:disabled{opacity:.6;cursor:not-allowed}
   font-size:12px;color:var(--muted);
 }
 
-/* Jabatan editable hint */
-.jabatan-wrap{position:relative;}
-.jabatan-hint{
-  font-size:11px;
-  color:var(--muted);
-  margin-top:3px;
-  font-style:italic;
-}
-#jabatan{
-  background:#fff;
-  cursor:text;
-  transition:border-color .2s, box-shadow .2s;
-}
-#jabatan:focus{
-  outline:none;
-  border-color:var(--bg2);
-  box-shadow:0 0 0 3px rgba(31,162,255,.15);
-}
-#jabatan.autofilled{
-  background:#f0f4ff;
-  border-color:#a5c8ff;
-}
-
 /* Clock Picker */
 .clock-trigger{
   display:flex;
@@ -287,10 +264,8 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <div id="nameDropdown" class="hidden"></div>
 
     <label>Jabatan <span style="color:red">*</span></label>
-    <div class="jabatan-wrap">
-      <input type="text" id="jabatan" placeholder="Auto-isi atau taip jabatan..." required>
-      <div class="jabatan-hint" id="jabatanHint">✏️ Boleh diedit — untuk orang luar atau jabatan berbeza</div>
-    </div>
+    <input type="text" id="jabatan" placeholder="--" required
+      style="background:#f0f4ff;cursor:not-allowed;" readonly>
 
     <label id="jenisLabel">Jenis Aset <span style="color:red">*</span></label>
     <select id="jenisSelect">
@@ -314,7 +289,11 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <!-- KENDERAAN PENGGUNAAN -->
     <div id="wrap_jenisKenderaan" class="hidden">
       <label>Jenis Kenderaan</label>
-      <input type="text" id="jenisKenderaan" placeholder="Contoh: Van">
+      <select id="jenisKenderaan">
+        <option value="">-- Pilih Kenderaan --</option>
+        <option value="Inova">Inova</option>
+        <option value="Hilux">Hilux</option>
+      </select>
     </div>
     <div id="wrap_masa" class="hidden">
       <label>Masa</label>
@@ -344,7 +323,11 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <!-- PERMOHONAN KENDERAAN -->
     <div id="wrap_pgJenisKenderaan" class="hidden">
       <label>Jenis Kenderaan</label>
-      <input type="text" id="pgJenisKenderaan" placeholder="Contoh: Van, Kereta...">
+      <select id="pgJenisKenderaan">
+        <option value="">-- Pilih Kenderaan --</option>
+        <option value="Inova">Inova</option>
+        <option value="Hilux">Hilux</option>
+      </select>
     </div>
     <div id="wrap_pgTarikhPergi" class="hidden">
       <label>Tarikh Pergi <span style="color:red">*</span></label>
@@ -465,8 +448,28 @@ async function loadNames(){
     document.getElementById('namaInput').placeholder = namesData.length
       ? 'Taip untuk cari nama...'
       : 'Taip nama anda...';
-    // Jabatan sentiasa boleh diedit — tiada perubahan perlu
+
+    if(!namesData.length){
+      setJabatanEditable();
+    }
   }
+}
+
+/* ── Helper: jabatan editable / readonly ── */
+function setJabatanEditable(){
+  const jab = document.getElementById('jabatan');
+  jab.removeAttribute('readonly');
+  jab.style.background = '';
+  jab.style.cursor = '';
+  jab.placeholder = 'Taip jabatan anda...';
+}
+
+function setJabatanReadonly(){
+  const jab = document.getElementById('jabatan');
+  jab.setAttribute('readonly', true);
+  jab.style.background = '#f0f4ff';
+  jab.style.cursor = 'not-allowed';
+  jab.placeholder = '--';
 }
 
 /* ── Highlight carian ── */
@@ -481,50 +484,65 @@ function setupAutocomplete(){
   const nama = document.getElementById('namaInput');
   const jab  = document.getElementById('jabatan');
   const drop = document.getElementById('nameDropdown');
-  const hint = document.getElementById('jabatanHint');
 
   nama.addEventListener('input', () => {
     const q = nama.value.trim();
-    // Bila user edit nama, tunjuk hint semula tapi JANGAN paksa reset jabatan
-    // Biar user decide kalau nak tukar jabatan sendiri
-    if(!q || !namesData.length){ drop.classList.add('hidden'); return; }
+    jab.value = '';
+
+    if(!q){
+      drop.classList.add('hidden');
+      setJabatanReadonly();
+      return;
+    }
+
+    if(!namesData.length){
+      setJabatanEditable();
+      drop.classList.add('hidden');
+      return;
+    }
+
     const filtered = namesData.filter(x =>
       (x.Nama||'').toLowerCase().includes(q.toLowerCase())
-    ).slice(0,20);
+    ).slice(0, 20);
+
+    if(!filtered.length){
+      setJabatanEditable();
+      drop.classList.add('hidden');
+      return;
+    }
+
+    setJabatanReadonly();
     drop.innerHTML = '';
-    if(!filtered.length){ drop.classList.add('hidden'); return; }
     filtered.forEach(item => {
       const d = document.createElement('div');
       d.className = 'name-option';
       d.innerHTML = highlight(item.Nama, q) +
-        (item.Jabatan||item.Dept ? `<br><small style="color:#6b7280">${item.Jabatan||item.Dept}</small>` : '');
+        (item.Jabatan||item.Dept
+          ? `<br><small style="color:#6b7280">${item.Jabatan||item.Dept}</small>`
+          : '');
       d.onclick = () => {
         nama.value = item.Nama;
         jab.value  = item.Jabatan || item.Dept || '';
-        // Tunjuk visual bahawa jabatan auto-filled tapi masih boleh edit
-        if(jab.value){
-          jab.classList.add('autofilled');
-          hint.textContent = '✅ Auto-isi — masih boleh ditukar jika perlu';
-          hint.style.color = '#059669';
-        }
         drop.classList.add('hidden');
-        jab.focus(); // Allow immediate editing
+        setJabatanReadonly();
       };
       drop.appendChild(d);
     });
     drop.classList.remove('hidden');
   });
 
-  // Bila user mula edit jabatan selepas auto-fill
-  jab.addEventListener('input', () => {
-    jab.classList.remove('autofilled');
-    hint.textContent = '✏️ Boleh diedit — untuk orang luar atau jabatan berbeza';
-    hint.style.color = '';
-  });
-
   document.addEventListener('click', e => {
-    if(!drop.contains(e.target) && !nama.contains(e.target))
+    if(!drop.contains(e.target) && !nama.contains(e.target)){
       drop.classList.add('hidden');
+      if(namesData.length && nama.value.trim()){
+        const exactMatch = namesData.some(x =>
+          (x.Nama||'').toLowerCase() === nama.value.trim().toLowerCase()
+        );
+        if(!exactMatch){
+          setJabatanEditable();
+        }
+      }
+    }
   });
 }
 
@@ -545,7 +563,6 @@ function updateFieldsByJenis(jenis){
       el.querySelectorAll('input,select').forEach(inp => inp.value = '');
     }
   });
-  // Reset clock displays
   ['clockDisplay','clockDisplayKend'].forEach(id => {
     const el = document.getElementById(id);
     if(el){ el.textContent = 'Pilih masa...'; el.classList.add('ct-placeholder'); }
@@ -588,10 +605,10 @@ document.getElementById('pgTarikhBalik').addEventListener('change', function(){
 /* ══════════════════════════════════════
    CLOCK PICKER (reusable)
 ══════════════════════════════════════ */
-let clockMode          = 'hour';
-let clockHour          = 12;
-let clockMin           = 0;
-let clockAmPm          = 'AM';
+let clockMode            = 'hour';
+let clockHour            = 12;
+let clockMin             = 0;
+let clockAmPm            = 'AM';
 let clockTargetValueId   = null;
 let clockTargetDisplayId = null;
 
@@ -670,8 +687,8 @@ function confirmClock(){
   if(hour12 === 0) hour12 = 12;
   if(hour12 > 12)  hour12 = hour12 - 12;
 
-  const h = String(hour12);
-  const m = String(clockMin).padStart(2,'0');
+  const h   = String(hour12);
+  const m   = String(clockMin).padStart(2,'0');
   const val = `${h}:${m} ${clockAmPm}`;
 
   document.getElementById(clockTargetValueId).value = val.trim();
@@ -683,7 +700,7 @@ function confirmClock(){
   closeClock();
 }
 
-/* ── Helper ── */
+/* ── Helper masa ── */
 function getMasaById(id){
   const v = document.getElementById(id).value;
   return v ? String(v).trim() : null;
@@ -693,7 +710,7 @@ function getMasaById(id){
 document.getElementById('assetForm').addEventListener('submit', async e => {
   e.preventDefault();
 
-  const jenis   = document.getElementById('jenisSelect').value;
+  const jenis = document.getElementById('jenisSelect').value;
   if(!jenis) return showMessage('Sila pilih jenis aset','warning');
 
   const namaVal = document.getElementById('namaInput').value.trim();
@@ -701,7 +718,6 @@ document.getElementById('assetForm').addEventListener('submit', async e => {
   if(!namaVal) return showMessage('Sila masukkan nama','warning');
   if(!jabVal)  return showMessage('Sila masukkan jabatan','warning');
 
-  // Validate permohonan kenderaan
   if(jenis === 'permohonan_kenderaan'){
     const tPergi = document.getElementById('pgTarikhPergi').value;
     const tBalik = document.getElementById('pgTarikhBalik').value;
@@ -763,9 +779,7 @@ document.getElementById('assetForm').addEventListener('submit', async e => {
       showMessage('✓ Permohonan berjaya dihantar!','success');
       e.target.reset();
       document.getElementById('jabatan').value = '';
-      document.getElementById('jabatan').classList.remove('autofilled');
-      document.getElementById('jabatanHint').textContent = '✏️ Boleh diedit — untuk orang luar atau jabatan berbeza';
-      document.getElementById('jabatanHint').style.color = '';
+      setJabatanReadonly();
       updateFieldsByJenis('');
       const params = new URLSearchParams(window.location.search);
       if(!params.get('jenis')){
@@ -801,7 +815,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadNames();
   setupAutocomplete();
 
-  // Clock face click (set by angle)
   document.getElementById('clockFace').addEventListener('click', function(e){
     if(e.target.classList.contains('clock-tick')) return;
     const rect = this.getBoundingClientRect();
@@ -823,7 +836,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Trigger buttons
   document.getElementById('clockTrigger').addEventListener('click',     () => openClock('pgMasaValue', 'clockDisplay'));
   document.getElementById('clockTriggerKend').addEventListener('click', () => openClock('masaValue',   'clockDisplayKend'));
 
@@ -838,7 +850,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btnAM').addEventListener('click',  () => { clockAmPm = 'AM';   updateClockUI(); });
   document.getElementById('btnPM').addEventListener('click',  () => { clockAmPm = 'PM';   updateClockUI(); });
 
-  // URL param jenis
   const params      = new URLSearchParams(window.location.search);
   const jenisParam  = params.get('jenis');
   const mappedJenis = jenisParam ? (jenisMap[jenisParam] || '') : '';
